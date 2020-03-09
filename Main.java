@@ -1,50 +1,60 @@
-import java.math.BigDecimal;
-import java.util.ArrayList;
-
-import accounts.Account;
-import accounts.CheckingAccount;
-import accounts.SavingsAccount;
-
 /**
- * Main Class for BankAccount (Homework1)
+ * Banking System
  * @author Nicholas Taylor
  */
+
+// Import Classes from other Packages
+import dao.*;
+import accounts.*;
+import userInfo.*;
+
+import java.time.LocalDate;
+
 public class Main {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 
-		// Make both a Savings Account and Checking Account
-		SavingsAccount savingsAccount = new SavingsAccount(new BigDecimal("100.00"), "Taylor");
-		CheckingAccount checkingAccount = new CheckingAccount(new BigDecimal("100.00"), "Taylor");
-		
-		// Make an ArrayList of these accounts
-		ArrayList<Account> accounts = new ArrayList<Account>();
-		accounts.add(savingsAccount);
-		accounts.add(checkingAccount);
-		
-		// Test Deposit and Withdraw from Savings Account
-		savingsAccount.deposit("5000.00");
-		savingsAccount.withdraw("5000.00");
-		System.out.print("SAVINGS: " + savingsAccount.getAccountBalance() + "\n");
-		//savingsAccount.withdraw("100000.00"); Throws Illegal Exception so just commenting out
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		checkingAccount.deposit("5000.00");
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		checkingAccount.withdraw("5000.00");
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		checkingAccount.withdraw("800.00");
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		checkingAccount.withdraw("100000.00"); // Will print an error and not give any money
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		checkingAccount.withdraw("100.00");
-		System.out.print("CHECKING: " + checkingAccount.getAccountBalance() + "\n");
-		
-		System.out.println("Depositing 1200.00 to both accounts");
-		for(Account account : accounts){ 
-			account.deposit("1200.00"); 
-			System.out.println(account.getAccountBalance()); 
-		}
-		
-	} // End Main Method
+		Address address = new Address();
+		User user = new User("Nicholas", "Adam", "Taylor", LocalDate.of(1999, 9, 8), "T460630031699", "System Analyst", address);
+		Account account = AccountFactory.getAccount(AccountType.PERSONAL_CHECKING, user, true);
 
-} // End Main Class
+		// Records User to db
+		UserDAO userDAO = new UserDAO();
+		userDAO.recordUser(user);
+
+		// Records Account to db
+		AccountDAO accountDAO = new AccountDAO();
+		accountDAO.recordAccount(account);
+
+		// Prepares to interact with db and accounts
+		TransactionDAO transactionDAO = new TransactionDAO();
+		AccountActions accountActions = new AccountActions(accountDAO, transactionDAO);
+
+		// Tests deposit
+		accountActions.deposit(account, "50.00");
+		System.out.println(account.getAccountBalance());
+
+		// Tests withdraw
+		accountActions.withdraw(account, "75.00");
+		System.out.println(account.getAccountBalance());
+
+		// Tests charging accounts for monthly fees
+		MonthlyFeeService monthlyFeeService = new MonthlyFeeService(transactionDAO, accountDAO);
+		monthlyFeeService.applyMonthlyFee();
+
+		// Tests checking account after charges
+		account = accountDAO.getAccount("0");
+		System.out.println(account.getAccountBalance());
+
+		// Makes savings account for user
+		account = AccountFactory.getAccount(AccountType.PERSONAL_SAVINGS, user, true);
+		accountDAO.recordAccount(account);
+		accountActions.deposit(account, "50.00");
+
+		// Displays Results
+		account = accountDAO.getAccount("1");
+		System.out.println(account.getAccountBalance());
+		
+	}
+
+}
