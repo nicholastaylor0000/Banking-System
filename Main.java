@@ -1,5 +1,5 @@
 /**
- * Banking System - Homework 3
+ * Banking System
  * @author Nicholas Taylor
  */
 
